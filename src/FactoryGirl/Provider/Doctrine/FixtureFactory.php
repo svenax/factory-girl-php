@@ -108,7 +108,30 @@ class FixtureFactory
         
         return $ent;
     }
-    
+
+
+    /**
+     * Get an array of entities and their dependencies.
+     *
+     * Whether the entities are new or not depends on whether you've created
+     * a singleton with the entity name. See `getAsSingleton()`.
+     *
+     * If you've called `persistOnGet()` then the entities are also persisted.
+     */
+    public function getList($name, array $fieldOverrides = array(), $numberOfInstances = 1)
+    {
+        if ($numberOfInstances < 1) {
+            throw new \InvalidArgumentException('Can only get >= 1 instances');
+        }
+
+        $instances = array();
+        for ($i = 0; $i < $numberOfInstances; $i++) {
+            $instances[] = $this->get($name, $fieldOverrides);
+        }
+
+        return $instances;
+    }
+
     protected function checkFieldOverrides(EntityDef $def, array $fieldOverrides)
     {
         $extraFields = array_diff(array_keys($fieldOverrides), array_keys($def->getFieldDefs()));
@@ -122,13 +145,21 @@ class FixtureFactory
         $metadata = $def->getEntityMetadata();
         
         if ($metadata->isCollectionValuedAssociation($fieldName)) {
-            $metadata->setFieldValue($ent, $fieldName, new ArrayCollection());
+            $metadata->setFieldValue($ent, $fieldName, $this->createCollectionFrom($fieldValue));
         } else {
             $metadata->setFieldValue($ent, $fieldName, $fieldValue);
 
             if (is_object($fieldValue) && $metadata->isSingleValuedAssociation($fieldName)) {
                 $this->updateCollectionSideOfAssocation($ent, $metadata, $fieldName, $fieldValue);
             }
+        }
+    }
+
+    protected function createCollectionFrom($array = array()) {
+        if(is_array($array)) {
+            return new ArrayCollection($array);
+        } else {
+            return new ArrayCollection();
         }
     }
     

@@ -2,6 +2,7 @@
 namespace FactoryGirl\Tests\Provider\Doctrine\Fixtures;
 
 use Doctrine\Common\Collections\ArrayCollection;
+use FactoryGirl\Provider\Doctrine\FieldDef;
 
 class BasicUsageTest extends TestCase
 {
@@ -46,6 +47,17 @@ class BasicUsageTest extends TestCase
             ->get('SpaceShip', array('name' => 'My CattleBruiser'));
         $this->assertEquals('My CattleBruiser', $ss->getName());
     }
+
+    /**
+     * @test
+     */
+    public function preservesDefaultValuesOfEntity()
+    {
+        $ss = $this->factory
+            ->defineEntity('SpaceStation')
+            ->get('SpaceStation');
+        $this->assertEquals('Babylon5', $ss->getName());
+    }    
     
     /**
      * @test
@@ -61,7 +73,7 @@ class BasicUsageTest extends TestCase
     /**
      * @test
      */
-    public function instantiatesCollectionAssociationsToBeEmptyCollections()
+    public function instantiatesCollectionAssociationsToBeEmptyCollectionsWhenUnspecified()
     {
         $ss = $this->factory
             ->defineEntity('SpaceShip', array(
@@ -71,6 +83,29 @@ class BasicUsageTest extends TestCase
         
         $this->assertTrue($ss->getCrew() instanceof ArrayCollection);
         $this->assertTrue($ss->getCrew()->isEmpty());
+    }
+
+    /**
+     * @test
+     */
+    public function arrayElementsAreMappedToCollectionAsscociationFields()
+    {
+        $this->factory->defineEntity('SpaceShip');
+        $this->factory->defineEntity('Person', array(
+            'spaceShip' => FieldDef::reference('SpaceShip')
+        ));
+
+        $p1 = $this->factory->get('Person');
+        $p2 = $this->factory->get('Person');
+
+        $ship = $this->factory->get('SpaceShip', array(
+            'name' => 'Battlestar Galaxy',
+            'crew' => array($p1, $p2)
+        ));
+        
+        $this->assertTrue($ship->getCrew() instanceof ArrayCollection);
+        $this->assertTrue($ship->getCrew()->contains($p1));
+        $this->assertTrue($ship->getCrew()->contains($p2));
     }
     
     /**
@@ -116,5 +151,25 @@ class BasicUsageTest extends TestCase
                 '\FactoryGirl\Tests\Provider\Doctrine\Fixtures\TestAnotherEntity\Artist'
             ))
         );
+    }
+
+    /**
+     * @test
+     */
+    public function returnsListOfEntities()
+    {
+        $this->factory->defineEntity('SpaceShip');
+
+        $this->assertCount(1, $this->factory->getList('SpaceShip'));
+    }
+
+    /**
+     * @test
+     */
+    public function canSpecifyNumberOfReturnedInstances()
+    {
+        $this->factory->defineEntity('SpaceShip');
+
+        $this->assertCount(5, $this->factory->getList('SpaceShip', array(), 5));
     }
 }
